@@ -1,33 +1,89 @@
-
 # Data Dictionary
 
-## Input Dataset: customers.csv
+## 1. Input Dataset: `customers.csv`
+
+**Entity:** Customer
+
+**Grain:** One row represents one customer source record.
 
 | Column | Description | Data Type | Sensitive |
 |---|---|---|---|
-| customer_id | Unique customer identifier | String | Yes |
+| customer_id | Customer business identifier | String | Yes |
 | full_name | Customer full name | String | Yes |
 | email | Customer email address | String | Yes |
 | phone | Customer phone number | String | Yes |
-| age | Customer age | Integer | No |
+| age | Customer age in years | Integer | No |
 | city | Customer city | String | No |
 | annual_income | Customer annual income | Numeric | Yes |
 | registration_date | Customer registration date | Date | No |
-| source_row_number | Original source row number | Integer | No |
+| source_row_number | Original source row number for traceability | Integer | No |
 
-## Published Dataset: analytical_customers
+## 2. Published Dataset: `analytical_customers`
 
-| Column | Description |
+**Storage:** SQLite
+
+**Grain:** One row represents one validated customer.
+
+| Column | Description | Data Type | Sensitive |
+|---|---|---|---|
+| customer_token | Deterministic HMAC-SHA256 customer token | String | Pseudonymous |
+| age | Customer age in years | Integer | No |
+| city | Customer city | String | No |
+| annual_income | Customer annual income | Numeric | No |
+| registration_date | Customer registration date | Date | No |
+
+## 3. Validation Rules
+
+| Field | Validation Rule |
 |---|---|
-| customer_token | HMAC-SHA256 customer token |
-| age | Customer age |
-| city | Customer city |
-| annual_income | Customer annual income |
-| registration_date | Customer registration date |
+| customer_id | Required and unique |
+| full_name | Required |
+| email | Required and valid email format |
+| phone | Required and 10-digit format |
+| age | Required integer between 18 and 100 |
+| city | Required |
+| annual_income | Required positive numeric value |
+| registration_date | Required and parseable as a date |
 
-## Privacy Notes
+Invalid records are separated from valid records and written to the rejected-record output with rejection reasons and source traceability.
 
-- Customer IDs are tokenized using HMAC-SHA256.
-- Names, emails, and phone numbers are masked.
-- Original sensitive columns are removed before publishing.
-- Only minimized analytical data is published to SQLite.
+## 4. Privacy Transformation Rules
+
+- `customer_id` is tokenized using HMAC-SHA256.
+- `full_name`, `email`, and `phone` are masked according to configurable privacy rules.
+- Original sensitive columns are removed before analytical publishing.
+- The HMAC secret is supplied through an environment variable and must not be committed to source control.
+- HMAC tokenization provides pseudonymization, not anonymization.
+
+## 5. Published Data Minimization
+
+Only the following columns are published:
+
+- `customer_token`
+- `age`
+- `city`
+- `annual_income`
+- `registration_date`
+
+The published dataset is stored in the SQLite analytical database.
+
+## 6. Audit and Traceability
+
+The pipeline records:
+
+- Unique pipeline Run ID
+- Execution timestamps
+- Processing stage and status
+- Input and output record counts
+- Rejected record counts
+- Failure details and execution duration
+
+Audit entries are stored in `logs/audit.jsonl`.
+
+## 7. Assumptions and Scope
+
+- The current implementation processes a single customer entity.
+- Customer identifiers are expected to be unique.
+- The published analytical table represents the latest snapshot.
+- Historical analytical versions and multi-entity relationships are outside the current implementation scope.
+- Synthetic data is used for development and testing.

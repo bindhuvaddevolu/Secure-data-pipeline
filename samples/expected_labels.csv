@@ -1,0 +1,5 @@
+row_number,expected_issue
+21,duplicate_customer_id
+22,missing_email
+23,invalid_age
+24,malformed_email

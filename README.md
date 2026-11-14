@@ -37,6 +37,8 @@ The project follows a modular three-layer architecture.
 - JSON reports
 - Audit logs
 
+For more architectural details, see [ARCHITECTURE.md](ARCHITECTURE.md).
+
 ## 3. Pipeline Execution Flow
 
 The pipeline executes the following stages:
@@ -45,7 +47,7 @@ The pipeline executes the following stages:
 2. Ingest the input dataset.
 3. Profile the dataset and calculate data quality metrics.
 4. Validate records and identify invalid data.
-5. Move rejected records into quarantine.
+5. Separate rejected records into quarantine.
 6. Apply configurable masking and HMAC-SHA256 tokenization.
 7. Minimize the dataset by retaining only analytical fields.
 8. Perform security checks before publishing.
@@ -68,32 +70,26 @@ Each pipeline execution is tracked using a unique Run ID.
 - Data minimization
 - Secure analytical publishing
 - Run-level audit trail
-Execution timestamps and duration tracking
+- Execution timestamps and duration tracking
+- Failure logging and retry scenario testing
+- Source-to-target reconciliation
+- Performance measurement
+- Automated test coverage
 
-Failure logging and retry scenario testing
+## 5. Technology Stack
 
-Source-to-target reconciliation
+| Technology | Purpose |
+|---|---|
+| Python 3.13 | Pipeline implementation |
+| Pandas | Data processing |
+| Faker | Synthetic data generation |
+| SQLite | Analytical data publishing |
+| JSON | Configuration and reports |
+| Pytest | Automated testing |
 
-Performance measurement
+## 6. Project Structure
 
-Automated test coverage
-
-5. Technology Stack
-
-Python 3.13
-
-Pandas
-
-Faker
-
-SQLite
-
-JSON
-
-Pytest
-
-6. Project Structure
-
+```text
 secure-data-pipeline/
 │
 ├── config/
@@ -107,6 +103,13 @@ secure-data-pipeline/
 ├── logs/
 │
 ├── reports/
+│   └── data_dictionary.md
+│
+├── samples/
+│   ├── sample_input.csv
+│   ├── expected_labels.csv
+│   ├── sample_analytical_output.csv
+│   └── sample_reconciliation.json
 │
 ├── src/
 │   ├── __init__.py
@@ -136,65 +139,78 @@ secure-data-pipeline/
 ├── main.py
 ├── README.md
 ├── ARCHITECTURE.md
-└── requirements.txt
+├── DESIGN_DECISIONS.md
+├── requirements.txt
+└── .gitignore
+```
 
-7. Installation and Setup
+## 7. Installation and Setup
 
-Step 1: Clone the repository
+### Step 1: Clone the repository
 
+```bash
 git clone https://github.com/bindhuvaddevolu/Secure-data-pipeline.git
 cd Secure-data-pipeline
+```
 
-Step 2: Create a virtual environment
+### Step 2: Create a virtual environment
 
+```bash
 python -m venv venv
+```
 
-Step 3: Activate the environment (Windows)
+### Step 3: Activate the environment (Windows)
 
+```cmd
 venv\Scripts\activate
+```
 
-Step 4: Install dependencies
+### Step 4: Install dependencies
 
+```bash
 pip install -r requirements.txt
+```
 
-Step 5: Configure the tokenization secret
+### Step 5: Configure the tokenization secret
 
-The pipeline uses the PIPELINE_TOKEN_SECRET environment variable for HMAC-based tokenization.
+The pipeline uses the `PIPELINE_TOKEN_SECRET` environment variable for HMAC-based tokenization.
 
 For Windows Command Prompt:
 
+```cmd
 set PIPELINE_TOKEN_SECRET=your_demo_secret_key_at_least_32_chars
+```
 
 For PowerShell:
 
+```powershell
 $env:PIPELINE_TOKEN_SECRET="your_demo_secret_key_at_least_32_chars"
+```
 
 Use a secure, randomly generated secret in real deployments. Never commit the actual secret to Git.
 
-8. Run the Pipeline
+## 8. Run the Pipeline
 
 Execute the complete pipeline:
 
+```bash
 python main.py
+```
 
 The pipeline generates synthetic customer data and processes it through all stages.
 
 On successful execution, the pipeline displays:
 
-Unique Run ID
+- Unique Run ID
+- Total input records
+- Valid records
+- Rejected records
+- Published records
+- Reconciliation status
 
-Total input records
+### Sample Execution Summary
 
-Valid records
-
-Rejected records
-
-Published records
-
-Reconciliation status
-
-Sample Execution Summary
-
+```text
 ========== PIPELINE SUMMARY ==========
 
 Run ID: <unique-run-id>
@@ -205,93 +221,153 @@ Published records: 20
 Reconciliation status: passed
 
 Pipeline completed successfully!
+```
 
-9. Run Automated Tests
+## 9. Run Automated Tests
 
 Execute all automated tests:
 
+```bash
 python -m pytest -v
+```
 
-The project currently includes 32 automated tests covering:
+The project currently includes **32 automated tests** covering:
 
-Data generation
+- Data generation
+- Data ingestion
+- Data validation
+- Privacy transformations
+- Data minimization
+- Security validation
+- Database publishing
+- Reconciliation
+- Audit logging
+- Pipeline integration
+- Failure and retry scenarios
 
-Data ingestion
+**Latest test result: 32 passed.**
 
-Data validation
+## 10. Sample Data and Execution Evidence
 
-Privacy transformations
+The `samples/` directory contains synthetic input data and actual pipeline output for demonstration and evaluation.
 
-Data minimization
+| File | Description |
+|---|---|
+| `samples/sample_input.csv` | Synthetic customer input dataset |
+| `samples/expected_labels.csv` | Expected validation labels |
+| `samples/sample_analytical_output.csv` | Minimized and tokenized analytical output |
+| `samples/sample_reconciliation.json` | Pipeline reconciliation results |
 
-Security validation
+### Sample Execution Results
 
-Database publishing
+| Metric | Result |
+|---|---:|
+| Total input records | 24 |
+| Valid records | 20 |
+| Rejected records | 4 |
+| Published records | 20 |
+| Reconciliation | Passed |
 
-Reconciliation
+The expected labels are maintained separately from the input dataset to support validation testing.
 
-Audit logging
+## 11. Idempotency, Retry, Restart and Backfill
 
-Pipeline integration
+### Idempotency
 
-Failure and retry scenarios
+The pipeline uses staging-based SQLite publishing to avoid duplicate analytical records during repeated publishing operations.
 
-Latest test result: 32 passed.
+- Data is loaded into a staging table before replacing the target table.
+- Duplicate customer tokens are rejected before publishing.
+- Repeated publishing of the same dataset produces the expected target record count.
+- Automated tests verify repeated publishing and duplicate-token handling.
 
-10. Performance Benchmark
+**Current limitation:** Idempotency is verified at the database publishing stage. Full pipeline-level checkpoint-based idempotency is not implemented.
+
+### Retry Behavior
+
+The pipeline records execution status, errors, and stage-level audit information using a unique Run ID.
+
+If a pipeline stage fails:
+
+1. The failure is recorded in the audit log.
+2. Error details are available for investigation.
+3. The operator can resolve the issue and execute the pipeline again.
+4. The new execution receives a unique Run ID.
+
+Failure and retry scenarios are covered by integration tests.
+
+### Restart Behavior
+
+The current implementation restarts pipeline execution from the beginning.
+
+It does not support automatic recovery from the last successfully completed stage or checkpoint-based continuation.
+
+### Backfill Behavior
+
+Historical data reprocessing is not currently implemented as a dedicated backfill workflow.
+
+A future enhancement could introduce configurable source-file paths, date-range selection, and historical run tracking.
+
+### Reliability Capabilities
+
+| Capability | Implementation |
+|---|---|
+| Repeated database publishing | Supported and tested |
+| Duplicate token prevention | Supported and tested |
+| Failure logging | Implemented |
+| Retry through a new execution | Tested |
+| Automatic checkpoint recovery | Not implemented |
+| Dedicated backfill workflow | Future enhancement |
+
+## 12. Performance Benchmark
 
 The pipeline was benchmarked using 100,000 synthetic customer records.
 
-Metric
+| Metric | Result |
+|---|---:|
+| Records processed | 100,000 |
+| Total execution time | 13.15 seconds |
+| Peak Python-tracked memory | 89.27 MB |
+| Throughput | 7,603.74 records/second |
 
-Result
+The benchmark includes an optimization using pre-generated Faker value pools to reduce repeated data-generation overhead.
 
-Records processed
+Results are from a local benchmark and may vary depending on hardware and system conditions. Memory represents Python-tracked memory, not total process memory.
 
-100,000
+## 13. Security Considerations
 
-Total execution time
+- Sensitive customer fields are removed from the analytical dataset.
+- HMAC-SHA256 tokenization protects customer identifiers through pseudonymization.
+- Tokenization secrets are supplied through environment variables.
+- Invalid records are separated into quarantine.
+- Analytical data is checked before publishing.
+- Audit logs capture pipeline execution details.
+- Data reconciliation verifies source and target record counts.
 
-13.15 seconds
+**Important:** HMAC-SHA256 tokenization is pseudonymization, not encryption or guaranteed anonymization. The security of tokenized data also depends on protecting the secret key.
 
-Peak Python-tracked memory
+Annual income is retained for analytical purposes in the current implementation. It may still be sensitive and should be protected through appropriate access controls.
 
-89.27 MB
+## 14. Design Decisions and Assumptions
 
-Throughput
+The project uses a modular Python architecture, Pandas for tabular processing, SQLite for local analytical publishing, and HMAC-SHA256 for deterministic pseudonymous customer identifiers.
 
-7,603.74 records/second
+The current solution processes a single customer entity. Multi-entity referential integrity, streaming, and late-arriving event processing are outside the current scope.
 
-Results are from one local benchmark and may vary depending on hardware and system conditions. Memory represents Python-tracked memory, not total process memory.
+For detailed technology choices and trade-offs, see [DESIGN_DECISIONS.md](DESIGN_DECISIONS.md).
 
-11. Security Considerations
+For field definitions and validation rules, see [reports/data_dictionary.md](reports/data_dictionary.md).
 
-Sensitive customer fields are removed from the analytical dataset.
+## 15. Future Enhancements
 
-HMAC-SHA256 tokenization protects customer identifiers through pseudonymization.
+- Interactive pipeline monitoring dashboard
+- Cloud storage integration
+- Distributed processing for larger datasets
+- Advanced monitoring and alerting
+- Checkpoint-based recovery
+- Historical data backfill support
+- Multi-entity referential integrity validation
 
-Tokenization secrets are supplied through environment variables.
+## 16. Author
 
-Invalid records are separated into quarantine.
-
-Analytical data is checked before publishing.
-
-Audit logs capture pipeline execution details.
-
-Data reconciliation verifies source and target record counts.
-
-Note: HMAC-SHA256 tokenization is pseudonymization, not encryption or guaranteed anonymization. The security of tokenized data also depends on protecting the secret key.
-
-12. Future Enhancements
-
-Interactive pipeline monitoring dashboard
-
-Cloud storage integration
-
-Distributed processing for larger datasets
-
-Advanced monitoring and alerting
-
-13. Author
-
-Vaddevolu HimaBindu
+**Vaddevolu HimaBindu**

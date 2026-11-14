@@ -1,0 +1,25 @@
+source_row_number,customer_id,full_name,email,phone,age,city,annual_income,registration_date
+1,CUST000001,Ayushman Chander,ekbal92@example.net,9872624731,33,Chandrapur,492632,2025-05-22
+2,CUST000002,Lajita Mall,theodore50@example.org,9384251354,45,Bhiwandi,262489,2024-01-14
+3,CUST000003,Saumya Mall,priya96@example.com,9435346247,56,Guntur,1377016,2024-12-05
+4,CUST000004,Lajita Mall,isaac46@example.org,9010651333,46,Chinsurah,783408,2025-03-06
+5,CUST000005,Rushil Saini,isaac46@example.org,9677360260,35,Mahbubnagar,651545,2026-04-01
+6,CUST000006,Ayushman Chander,theodore50@example.org,9430980500,24,Bikaner,1977324,2025-08-06
+7,CUST000007,Isha Kadakia,lakshitupadhyay@example.com,9248963834,64,Kishanganj,1324551,2025-05-22
+8,CUST000008,Tripti Yadav,theodore50@example.org,9510799118,36,Kalyan-Dombivli,958403,2023-12-22
+9,CUST000009,Saumya Mall,theodore50@example.org,9248963834,60,Chandrapur,1821241,2025-05-16
+10,CUST000010,Gagan Sami,priya96@example.com,9509839301,42,Tiruchirappalli,1150870,2025-08-06
+11,CUST000011,Rushil Saini,hsidhu@example.com,9647468723,31,Tiruchirappalli,1671823,2024-01-14
+12,CUST000012,Isha Kadakia,prandhawa@example.com,9510799118,64,Chandrapur,542679,2024-11-15
+13,CUST000013,Tripti Yadav,lakshitupadhyay@example.com,9510799118,32,Delhi,1967588,2025-06-02
+14,CUST000014,Nathaniel Sami,nihalshere@example.com,9677360260,43,Tiruchirappalli,338807,2024-12-05
+15,CUST000015,Janya Gaba,pahalbhatt@example.com,9631165667,59,Gorakhpur,1029700,2024-11-15
+16,CUST000016,Viraj Tiwari,lakshitupadhyay@example.com,9031051834,33,Uluberia,1330317,2024-04-21
+17,CUST000017,Janya Gaba,isaac46@example.org,9384251354,43,Bikaner,659948,2024-10-05
+18,CUST000018,Fariq Kaul,xiti28@example.org,9657871331,66,Bhiwandi,429950,2024-10-05
+19,CUST000019,Rushil Saini,isaac46@example.org,9278498084,22,Nanded,1000313,2024-08-18
+20,CUST000020,Janaki Handa,yashica93@example.org,9872624731,80,Uluberia,224077,2025-05-22
+21,CUST000001,Ayushman Chander,ekbal92@example.net,9872624731,33,Chandrapur,492632,2025-05-22
+22,CUST000021,Lajita Mall,,9384251354,45,Bhiwandi,262489,2024-01-14
+23,CUST000022,Saumya Mall,priya96@example.com,9435346247,150,Guntur,1377016,2024-12-05
+24,CUST000023,Lajita Mall,invalid-email,9010651333,46,Chinsurah,783408,2025-03-06
