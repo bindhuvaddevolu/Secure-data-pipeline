@@ -1,0 +1,35 @@
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Secrets
+.env
+*.key
+
+# Generated data
+data/input/*.csv
+data/output/*
+data/quarantine/*
+
+# Logs
+logs/*.jsonl
+logs/*.log
+
+# Generated reports
+reports/*.json
+
+# IDE
+.vscode/
+.idea/
+
+# Operating system
+.DS_Store
+Thumbs.db

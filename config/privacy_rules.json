@@ -1,0 +1,31 @@
+
+{
+    "tokenization": {
+        "enabled": true,
+        "source_column": "customer_id",
+        "output_column": "customer_token"
+    },
+    "masking": {
+        "full_name": {
+            "enabled": true,
+            "output_column": "masked_name",
+            "method": "mask_name"
+        },
+        "email": {
+            "enabled": true,
+            "output_column": "masked_email",
+            "method": "mask_email"
+        },
+        "phone": {
+            "enabled": true,
+            "output_column": "masked_phone",
+            "method": "mask_phone"
+        }
+    },
+    "drop_original_columns": [
+        "customer_id",
+        "full_name",
+        "email",
+        "phone"
+    ]
+}
