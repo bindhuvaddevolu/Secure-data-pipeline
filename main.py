@@ -3,6 +3,9 @@ from pathlib import Path
 import json
 import time
 import uuid
+import sqlite3
+import pandas as pd
+
 from datetime import datetime, timezone, timedelta
 
 from src.data_generator import generate_dataset, save_dataset
@@ -59,6 +62,7 @@ def _run_pipeline(state, run_id):
         seed=42,
         include_edge_cases=True
     )
+
     save_dataset(df, labels)
 
     state["input_records"] = len(df)
@@ -66,6 +70,7 @@ def _run_pipeline(state, run_id):
     _log_stage(
         "data_generation", start, len(df), len(df), run_id
     )
+
     print("1. Data generation completed")
 
     # 2. Ingest data
@@ -80,6 +85,7 @@ def _run_pipeline(state, run_id):
     _log_stage(
         "data_ingestion", start, len(df), len(df), run_id
     )
+
     print("2. Data ingestion completed")
 
     # 3. Profile data
@@ -87,6 +93,7 @@ def _run_pipeline(state, run_id):
     start = time.perf_counter()
 
     report = profile_data(df)
+
     save_profile(
         report,
         root / "reports" / "profiling_report.json"
@@ -95,6 +102,7 @@ def _run_pipeline(state, run_id):
     _log_stage(
         "data_profiling", start, len(df), len(df), run_id
     )
+
     print("3. Data profiling completed")
 
     # 4. Validate data
@@ -127,6 +135,7 @@ def _run_pipeline(state, run_id):
         run_id,
         rejected_records=len(rejected_df)
     )
+
     print("4. Data validation completed")
 
     # 5. Mask sensitive data
@@ -140,7 +149,10 @@ def _run_pipeline(state, run_id):
         secret_key
     )
 
-    masked_file = root / "data" / "output" / "masked_customers.csv"
+    masked_file = (
+        root / "data" / "output" / "masked_customers.csv"
+    )
+
     masked_file.parent.mkdir(parents=True, exist_ok=True)
     masked_df.to_csv(masked_file, index=False)
 
@@ -151,6 +163,7 @@ def _run_pipeline(state, run_id):
         len(masked_df),
         run_id
     )
+
     print("5. Data masking completed")
 
     # 6. Minimize data
@@ -162,6 +175,7 @@ def _run_pipeline(state, run_id):
     analytical_file = (
         root / "data" / "output" / "analytical_customers.csv"
     )
+
     analytical_df.to_csv(analytical_file, index=False)
 
     _log_stage(
@@ -171,6 +185,7 @@ def _run_pipeline(state, run_id):
         len(analytical_df),
         run_id
     )
+
     print("6. Data minimization completed")
 
     # 7. Security validation
@@ -186,13 +201,16 @@ def _run_pipeline(state, run_id):
         len(analytical_df),
         run_id
     )
+
     print("7. Privacy security validation passed!")
 
     # 8. Database publishing
     state["stage"] = "database_publishing"
     start = time.perf_counter()
 
-    database_file = root / "data" / "output" / "analytics.db"
+    database_file = (
+        root / "data" / "output" / "analytics.db"
+    )
 
     published_count = publish_data(
         analytical_df,
@@ -208,6 +226,7 @@ def _run_pipeline(state, run_id):
         published_count,
         run_id
     )
+
     print(
         f"8. Database publishing completed: "
         f"{published_count} records"
@@ -217,29 +236,57 @@ def _run_pipeline(state, run_id):
     state["stage"] = "reconciliation"
     start = time.perf_counter()
 
+    # Read actual published data from SQLite
+    connection = sqlite3.connect(database_file)
+
+    try:
+        published_df = pd.read_sql_query(
+            "SELECT * FROM analytical_customers",
+            connection
+        )
+    finally:
+        connection.close()
+
+    # Reconcile counts, unique tokens and income totals
     reconciliation_report = reconcile_counts(
         input_records=len(df),
         valid_records=len(valid_df),
         rejected_records=len(rejected_df),
-        published_records=published_count
+        published_records=len(published_df),
+        validated_data=analytical_df,
+        published_data=published_df
     )
 
     reconciliation_path = (
         root / "reports" / "reconciliation_report.json"
     )
-    reconciliation_path.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(reconciliation_path, "w", encoding="utf-8") as file:
-        json.dump(reconciliation_report, file, indent=4)
+    reconciliation_path.parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    with open(
+        reconciliation_path,
+        "w",
+        encoding="utf-8"
+    ) as file:
+        json.dump(
+            reconciliation_report,
+            file,
+            indent=4
+        )
 
     _log_stage(
         "reconciliation",
         start,
         len(df),
-        published_count,
+        len(published_df),
         run_id
     )
+
     print("9. Reconciliation completed successfully!")
+    print(json.dumps(reconciliation_report, indent=4))
 
     # 10. Final summary
     print("\n========== PIPELINE SUMMARY ==========")
@@ -248,6 +295,7 @@ def _run_pipeline(state, run_id):
     print(f"Valid records: {len(valid_df)}")
     print(f"Rejected records: {len(rejected_df)}")
     print(f"Published records: {published_count}")
+
     print(
         "Reconciliation status:",
         reconciliation_report["reconciliation_status"]
@@ -258,6 +306,7 @@ def _run_pipeline(state, run_id):
 
 def run_pipeline():
     run_id = str(uuid.uuid4())
+
     pipeline_start = datetime.now(timezone.utc)
     timer_start = time.perf_counter()
 
@@ -275,7 +324,11 @@ def run_pipeline():
     try:
         _run_pipeline(state, run_id)
 
-        duration = round(time.perf_counter() - timer_start, 4)
+        duration = round(
+            time.perf_counter() - timer_start,
+            4
+        )
+
         pipeline_end = datetime.now(timezone.utc)
 
         write_audit_log(
@@ -291,7 +344,11 @@ def run_pipeline():
         )
 
     except Exception as error:
-        duration = round(time.perf_counter() - timer_start, 4)
+        duration = round(
+            time.perf_counter() - timer_start,
+            4
+        )
+
         pipeline_end = datetime.now(timezone.utc)
 
         print(f"\nPipeline failed during: {state['stage']}")
@@ -311,6 +368,7 @@ def run_pipeline():
                 start_time=pipeline_start.isoformat(),
                 end_time=pipeline_end.isoformat()
             )
+
         except Exception as audit_error:
             print(
                 "Failure audit could not be saved:",

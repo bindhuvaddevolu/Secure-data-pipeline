@@ -13,11 +13,13 @@ The pipeline also provides audit logging, data reconciliation, error handling, a
 The project follows a modular three-layer architecture.
 
 ### Presentation Layer
+
 - Displays pipeline execution results and summary information through the command-line interface.
 - Generates profiling, validation, reconciliation, and performance reports.
 - An interactive monitoring dashboard is planned as a future enhancement.
 
 ### Application Layer
+
 - Synthetic data generation
 - Data ingestion
 - Data profiling
@@ -31,6 +33,7 @@ The project follows a modular three-layer architecture.
 - Performance monitoring
 
 ### Data Layer
+
 - CSV input datasets
 - Validated and rejected records
 - SQLite analytical database
@@ -231,7 +234,7 @@ Execute all automated tests:
 python -m pytest -v
 ```
 
-The project currently includes **32 automated tests** covering:
+The project currently includes **40 automated tests** covering:
 
 - Data generation
 - Data ingestion
@@ -244,8 +247,9 @@ The project currently includes **32 automated tests** covering:
 - Audit logging
 - Pipeline integration
 - Failure and retry scenarios
+- Data quality and edge cases
 
-**Latest test result: 32 passed.**
+**Latest test result: 40 passed.**
 
 ## 10. Sample Data and Execution Evidence
 
@@ -269,6 +273,14 @@ The `samples/` directory contains synthetic input data and actual pipeline outpu
 | Reconciliation | Passed |
 
 The expected labels are maintained separately from the input dataset to support validation testing.
+
+The reconciliation report verifies:
+
+- Input records equal valid records plus rejected records.
+- Valid records equal published records.
+- Published customer tokens are unique.
+- Validated and published income totals match.
+- Published records match the validated analytical records at record level.
 
 ## 11. Idempotency, Retry, Restart and Backfill
 
@@ -354,6 +366,8 @@ The project uses a modular Python architecture, Pandas for tabular processing, S
 
 The current solution processes a single customer entity. Multi-entity referential integrity, streaming, and late-arriving event processing are outside the current scope.
 
+The current implementation does not include event-based processing for late-arriving or out-of-order data. Invalid foreign-key reference checks are not applicable because the sample dataset contains only one customer entity and no related entities.
+
 For detailed technology choices and trade-offs, see [DESIGN_DECISIONS.md](DESIGN_DECISIONS.md).
 
 For field definitions and validation rules, see [reports/data_dictionary.md](reports/data_dictionary.md).
@@ -367,7 +381,17 @@ For field definitions and validation rules, see [reports/data_dictionary.md](rep
 - Checkpoint-based recovery
 - Historical data backfill support
 - Multi-entity referential integrity validation
+- Historical analytical dataset versioning
 
-## 16. Author
+## 16. Known Limitations
+
+- **Recovery:** The pipeline supports retry by executing the complete pipeline again after a failure. It does not currently support checkpoint-based restart from the failed stage.
+- **Backfill:** A dedicated historical backfill mechanism is not implemented.
+- **Late-arriving data:** Event ordering and late-arriving data handling are outside the current scope because the sample project processes customer records rather than an event stream.
+- **Referential integrity:** The current dataset contains a single customer entity and does not define foreign-key relationships. Referential integrity checks are therefore not applicable to this implementation.
+- **History:** Publishing replaces the analytical snapshot. Historical versions of published datasets are not maintained.
+- **Deployment:** The solution currently runs locally using Python, Pandas, and SQLite. Cloud deployment is a possible future enhancement.
+
+## 17. Author
 
 **Vaddevolu HimaBindu**

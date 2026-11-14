@@ -29,8 +29,10 @@
 | customer_token | Deterministic HMAC-SHA256 customer token | String | Pseudonymous |
 | age | Customer age in years | Integer | No |
 | city | Customer city | String | No |
-| annual_income | Customer annual income | Numeric | No |
+| annual_income | Customer annual income retained for analytics | Numeric | Yes - retained with access restrictions |
 | registration_date | Customer registration date | Date | No |
+
+**Privacy Note:** Annual income remains potentially sensitive personal information even after direct identifiers are removed. It is retained for analytical purposes and must be protected through appropriate access controls. Removing direct identifiers does not guarantee complete anonymization.
 
 ## 3. Validation Rules
 
@@ -54,6 +56,7 @@ Invalid records are separated from valid records and written to the rejected-rec
 - Original sensitive columns are removed before analytical publishing.
 - The HMAC secret is supplied through an environment variable and must not be committed to source control.
 - HMAC tokenization provides pseudonymization, not anonymization.
+- `annual_income` is retained for analytics and remains potentially sensitive.
 
 ## 5. Published Data Minimization
 
@@ -66,6 +69,8 @@ Only the following columns are published:
 - `registration_date`
 
 The published dataset is stored in the SQLite analytical database.
+
+Although direct identifiers are removed, retained analytical attributes may still carry privacy risks. Access to the published dataset should therefore be restricted according to its intended use.
 
 ## 6. Audit and Traceability
 

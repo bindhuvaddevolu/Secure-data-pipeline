@@ -1,13 +1,20 @@
-
 {
   "pipeline_status": "completed",
+  "run_id": "1eb98cb6-9767-43bb-974d-ed665598a64b",
   "reconciliation_status": "passed",
-  "total_input_records": 24,
+  "input_records": 24,
   "valid_records": 20,
   "rejected_records": 4,
   "published_records": 20,
+  "published_tokens_unique": true,
+  "validated_income_total": 19994681.0,
+  "published_income_total": 19994681.0,
+  "income_reconciliation": "passed",
+  "record_level_reconciliation": "passed",
+  "records_verified": 20,
   "checks": {
     "input_equals_valid_plus_rejected": true,
-    "valid_equals_published": true
+    "valid_equals_published": true,
+    "record_level_data_matches": true
   }
 }

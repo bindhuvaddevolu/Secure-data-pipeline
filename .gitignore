@@ -20,6 +20,9 @@ env/
 data/input/*.csv
 data/output/*
 data/quarantine/*
+*.db
+*.sqlite
+*.sqlite3
 
 # Keep folders in Git
 !data/input/.gitkeep
