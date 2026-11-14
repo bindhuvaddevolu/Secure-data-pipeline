@@ -78,6 +78,10 @@ Each pipeline execution is tracked using a unique Run ID.
 - Source-to-target reconciliation
 - Performance measurement
 - Automated test coverage
+- Source row-level traceability for rejected records
+- Source file and Run ID tracking
+- Rejection reason tracking
+- UTC timestamps in ISO-8601 format
 
 ## 5. Technology Stack
 
@@ -106,7 +110,8 @@ secure-data-pipeline/
 ├── logs/
 │
 ├── reports/
-│   └── data_dictionary.md
+│   ├── data_dictionary.md
+│   └── test_results.txt
 │
 ├── samples/
 │   ├── sample_input.csv
@@ -171,7 +176,7 @@ venv\Scripts\activate
 ### Step 4: Install dependencies
 
 ```bash
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 ```
 
 ### Step 5: Configure the tokenization secret
@@ -251,6 +256,8 @@ The project currently includes **40 automated tests** covering:
 
 **Latest test result: 40 passed.**
 
+Test execution evidence is available in `reports/test_results.txt`.
+
 ## 10. Sample Data and Execution Evidence
 
 The `samples/` directory contains synthetic input data and actual pipeline output for demonstration and evaluation.
@@ -273,6 +280,10 @@ The `samples/` directory contains synthetic input data and actual pipeline outpu
 | Reconciliation | Passed |
 
 The expected labels are maintained separately from the input dataset to support validation testing.
+
+The latest successful pipeline execution is documented in `samples/sample_reconciliation.json`.
+
+It includes record counts, reconciliation results, token uniqueness, income totals, and the execution Run ID.
 
 The reconciliation report verifies:
 
