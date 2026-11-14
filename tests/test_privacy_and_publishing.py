@@ -1,4 +1,6 @@
 
+import sqlite3
+
 import pandas as pd
 import pytest
 
@@ -73,11 +75,28 @@ def test_repeated_publishing(tmp_path):
 
     database = tmp_path / "test.db"
 
+    # First publishing
     first = publish_data(df, database)
+
+    # Second publishing with the same dataset
     second = publish_data(df, database)
 
     assert first == 2
     assert second == 2
+
+    # Verify actual database records
+    with sqlite3.connect(database) as connection:
+        total_records = connection.execute(
+            "SELECT COUNT(*) FROM analytical_customers"
+        ).fetchone()[0]
+
+        unique_tokens = connection.execute(
+            "SELECT COUNT(DISTINCT customer_token) "
+            "FROM analytical_customers"
+        ).fetchone()[0]
+
+    assert total_records == 2
+    assert unique_tokens == 2
 
 
 def test_duplicate_tokens_rejected(tmp_path):

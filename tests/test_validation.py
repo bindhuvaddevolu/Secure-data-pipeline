@@ -59,3 +59,34 @@ def test_missing_schema_column():
 
     with pytest.raises(ValueError):
         validate_data(df)
+
+
+def test_source_traceability_metadata():
+    df = pd.DataFrame({
+        "customer_id": ["CUST001", "CUST002"],
+        "full_name": ["Rahul", "Priya"],
+        "email": ["rahul@gmail.com", None],
+        "phone": ["9876543210", "9876543211"],
+        "age": [25, 28],
+        "city": ["Hyderabad", "Mumbai"],
+        "annual_income": [500000, 600000],
+        "registration_date": ["2026-01-01", "2026-01-02"],
+        "source_row_number": [1, 2]
+    })
+
+    valid_df, rejected_df, report = validate_data(
+        df,
+        source_file="customers.csv",
+        run_id="test-run-123"
+    )
+
+    # Check valid record metadata
+    assert valid_df["source_file"].iloc[0] == "customers.csv"
+    assert valid_df["run_id"].iloc[0] == "test-run-123"
+
+    # Check rejected record metadata
+    assert rejected_df["source_file"].iloc[0] == "customers.csv"
+    assert rejected_df["run_id"].iloc[0] == "test-run-123"
+
+    # Check original row number
+    assert rejected_df["source_row_number"].iloc[0] == 2

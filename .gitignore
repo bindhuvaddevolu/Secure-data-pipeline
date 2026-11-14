@@ -1,9 +1,10 @@
-
 # Python
 __pycache__/
 *.py[cod]
 *.pyo
 .pytest_cache/
+.coverage
+htmlcov/
 
 # Virtual environments
 venv/
@@ -12,12 +13,18 @@ env/
 
 # Secrets
 .env
+.env.*
 *.key
 
 # Generated data
 data/input/*.csv
 data/output/*
 data/quarantine/*
+
+# Keep folders in Git
+!data/input/.gitkeep
+!data/output/.gitkeep
+!data/quarantine/.gitkeep
 
 # Logs
 logs/*.jsonl

@@ -1,5 +1,8 @@
 
+import json
 import re
+from pathlib import Path
+
 import pandas as pd
 
 
@@ -15,10 +18,27 @@ REQUIRED_COLUMNS = [
     "registration_date"
 ]
 
+REQUIRED_FIELDS = [
+    "customer_id",
+    "full_name",
+    "email",
+    "phone",
+    "age",
+    "city",
+    "annual_income",
+    "registration_date"
+]
 
-def validate_data(df):
+EMAIL_PATTERN = (
+    r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"
+)
+
+PHONE_PATTERN = r"^\d{10}$"
+
+
+def validate_data(df, source_file=None, run_id=None):
     """
-    Validate customer records using business rules.
+    Validate customer records using vectorized Pandas operations.
 
     Returns:
         valid_df: Records that pass all validation rules.
@@ -37,125 +57,166 @@ def validate_data(df):
             f"Missing required columns: {missing_columns}"
         )
 
-    # Work on a copy to preserve source data
     working_df = df.copy()
+        # Add source traceability metadata
+    if source_file is not None:
+        working_df["source_file"] = str(source_file)
 
-    # Store rejection reasons for each row
-    rejection_reasons = [[] for _ in range(len(working_df))]
+    if run_id is not None:
+        working_df["run_id"] = run_id
 
-    # Required field checks
-    required_fields = [
-        "customer_id",
-        "full_name",
-        "email",
-        "phone",
-        "age",
-        "city",
-        "annual_income",
-        "registration_date"
+    # Store rejection reasons by row position
+    rejection_reasons = [
+        [] for _ in range(len(working_df))
     ]
 
-    for field in required_fields:
+    def add_reason(mask, reason):
+        """Add a rejection reason to matching row positions."""
+        positions = (
+            mask.fillna(False)
+            .to_numpy()
+            .nonzero()[0]
+        )
 
+        for position in positions:
+            rejection_reasons[position].append(reason)
+
+    # 1. Required field validation
+    for field in REQUIRED_FIELDS:
         missing_mask = (
             working_df[field].isna()
-            | working_df[field].astype("string").str.strip().eq("")
-        ).fillna(True)
+            | working_df[field]
+                .astype("string")
+                .str.strip()
+                .eq("")
+        )
 
-        for index in range(len(working_df)):
-            if missing_mask.iloc[index]:
-                rejection_reasons[index].append(
-                    f"missing_required_field:{field}"
-                )
+        add_reason(
+            missing_mask,
+            f"missing_required_field:{field}"
+        )
 
-    # Duplicate customer ID check
+    # 2. Duplicate customer ID validation
     duplicate_mask = (
         working_df["customer_id"].notna()
         & working_df["customer_id"].duplicated(keep="first")
     )
 
-    for index in range(len(working_df)):
-        if duplicate_mask.iloc[index]:
-            rejection_reasons[index].append(
-                "duplicate_customer_id"
-            )
+    add_reason(
+        duplicate_mask,
+        "duplicate_customer_id"
+    )
 
-    # Email format validation
-    email_pattern = r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"
+    # 3. Email validation
+    email_values = (
+        working_df["email"]
+        .astype("string")
+        .str.strip()
+    )
 
-    for index, email in enumerate(working_df["email"]):
+    email_mask = (
+        email_values.notna()
+        & email_values.ne("")
+    )
 
-        if pd.notna(email) and str(email).strip():
+    valid_email_mask = email_values.str.fullmatch(
+        EMAIL_PATTERN,
+        na=False
+    )
 
-            if not re.fullmatch(email_pattern, str(email).strip()):
-                rejection_reasons[index].append(
-                    "malformed_email"
-                )
+    add_reason(
+        email_mask & ~valid_email_mask,
+        "malformed_email"
+    )
 
-    # Age validation
+    # 4. Age validation
     age_values = pd.to_numeric(
         working_df["age"],
         errors="coerce"
     )
 
-    for index, age in enumerate(age_values):
+    invalid_age_mask = (
+        age_values.notna()
+        & (
+            (age_values < 18)
+            | (age_values > 100)
+            | (age_values % 1 != 0)
+        )
+    )
 
-        if pd.notna(age):
+    add_reason(
+        invalid_age_mask,
+        "invalid_age"
+    )
 
-            if age < 18 or age > 100 or not float(age).is_integer():
-                rejection_reasons[index].append(
-                    "invalid_age"
-                )
+    invalid_age_format_mask = (
+        working_df["age"].notna()
+        & age_values.isna()
+    )
 
-        elif pd.notna(working_df.iloc[index]["age"]):
-            rejection_reasons[index].append(
-                "invalid_age_format"
-            )
+    add_reason(
+        invalid_age_format_mask,
+        "invalid_age_format"
+    )
 
-    # Phone validation
-    for index, phone in enumerate(working_df["phone"]):
+    # 5. Phone validation
+    phone_values = (
+        working_df["phone"]
+        .astype("string")
+        .str.strip()
+    )
 
-        if pd.notna(phone) and str(phone).strip():
+    phone_mask = (
+        phone_values.notna()
+        & phone_values.ne("")
+    )
 
-            if not re.fullmatch(r"\d{10}", str(phone).strip()):
-                rejection_reasons[index].append(
-                    "invalid_phone"
-                )
+    valid_phone_mask = phone_values.str.fullmatch(
+        PHONE_PATTERN,
+        na=False
+    )
 
-    # Income validation
+    add_reason(
+        phone_mask & ~valid_phone_mask,
+        "invalid_phone"
+    )
+
+    # 6. Annual income validation
     income_values = pd.to_numeric(
         working_df["annual_income"],
         errors="coerce"
     )
 
-    for index, income in enumerate(income_values):
+    add_reason(
+        income_values.notna() & (income_values <= 0),
+        "invalid_annual_income"
+    )
 
-        if pd.notna(income) and income <= 0:
-            rejection_reasons[index].append(
-                "invalid_annual_income"
-            )
+    invalid_income_format_mask = (
+        working_df["annual_income"].notna()
+        & income_values.isna()
+    )
 
-        elif pd.isna(income) and pd.notna(
-            working_df.iloc[index]["annual_income"]
-        ):
-            rejection_reasons[index].append(
-                "invalid_income_format"
-            )
+    add_reason(
+        invalid_income_format_mask,
+        "invalid_income_format"
+    )
 
-    # Registration date validation
+    # 7. Registration date validation
     dates = pd.to_datetime(
         working_df["registration_date"],
         errors="coerce"
     )
 
-    for index, date in enumerate(dates):
+    invalid_date_mask = (
+        working_df["registration_date"].notna()
+        & dates.isna()
+    )
 
-        if pd.isna(date) and pd.notna(
-            working_df.iloc[index]["registration_date"]
-        ):
-            rejection_reasons[index].append(
-                "invalid_registration_date"
-            )
+    add_reason(
+        invalid_date_mask,
+        "invalid_registration_date"
+    )
 
     # Separate valid and rejected records
     working_df["rejection_reasons"] = [
@@ -188,20 +249,10 @@ def save_validation_results(
     report,
     output_dir
 ):
-    """
-    Save validated records, rejected records
-    and validation report.
-    """
-
-    from pathlib import Path
-    import json
+    """Save valid records, rejected records and report."""
 
     output_dir = Path(output_dir)
-
-    output_dir.mkdir(
-        parents=True,
-        exist_ok=True
-    )
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     valid_df.to_csv(
         output_dir / "valid_records.csv",
@@ -218,21 +269,12 @@ def save_validation_results(
         "w",
         encoding="utf-8"
     ) as file:
-
-        json.dump(
-            report,
-            file,
-            indent=4
-        )
+        json.dump(report, file, indent=4)
 
     print("\nValidation results saved successfully!")
 
 
 if __name__ == "__main__":
-
-    from pathlib import Path
-    import json
-
     project_root = Path(__file__).resolve().parent.parent
 
     input_file = (
@@ -243,13 +285,10 @@ if __name__ == "__main__":
         project_root / "data" / "quarantine"
     )
 
-    # Read source dataset
     df = pd.read_csv(input_file)
 
-    # Perform validation
     valid_df, rejected_df, report = validate_data(df)
 
-    # Save results
     save_validation_results(
         valid_df,
         rejected_df,
@@ -257,9 +296,7 @@ if __name__ == "__main__":
         output_dir
     )
 
-    # Display summary
     print("\n========== VALIDATION REPORT ==========")
-
     print(json.dumps(report, indent=4))
 
     print("\nRejected record details:")
@@ -267,7 +304,11 @@ if __name__ == "__main__":
     if not rejected_df.empty:
         print(
             rejected_df[
-                ["source_row_number", "customer_id", "rejection_reasons"]
+                [
+                    "source_row_number",
+                    "customer_id",
+                    "rejection_reasons"
+                ]
             ].to_string(index=False)
         )
 
